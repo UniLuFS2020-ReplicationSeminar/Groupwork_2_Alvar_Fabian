@@ -1,34 +1,18 @@
 
-# Authentication
-if (!require("dotenv")) install.packages("dotenv", repos = "https://cloud.r-project.org/")
-library(dotenv)
 
-# Load other necessary packages
+# Read in and extract the API key from the csv file
+api_key_data <- read.csv("api_key.csv", header = FALSE)
+api_key <- api_key_data$V1[1] 
 
-library(tidyverse)
-library(httr)
-library(jsonlite)
-
-
-# Load environment variables
-load_dot_env()
-
-# Retrieve the API key
-api_key <- Sys.getenv('api_key')
-
-# Test whether access to API key is working
 # Set up the base URL for the content search endpoint
-url <- "https://content.guardianapis.com/search"
-
-# Define query parameters
-cnt <- list(
-  'q' = 'cryptocurrency'
-)
-
-# Make the HTTP request
-response <- GET(url = url, query = cnt)
-response
+base_url <- "https://content.guardianapis.com/search"
 
 
-files <- list.files
+
+
+
+
+
+
+
 
