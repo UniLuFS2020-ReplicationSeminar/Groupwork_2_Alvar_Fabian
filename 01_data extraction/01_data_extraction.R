@@ -11,7 +11,7 @@ api_key_data <- read.csv("api_key.csv", header = FALSE)
 api_key <- api_key_data$V1[1]
 base_url <- "https://content.guardianapis.com/search"
 query_params <- list(
-  q = "cryptocurrency AND blockchain OR bitcoin OR ethereum",
+  q = "cryptocurrency AND blockchain AND bitcoin OR ethereum", # to make the search more robust and specific
   "order-by" = "newest",
   "page-size" = 200,
   "api-key" = api_key,

@@ -13,6 +13,14 @@ sentiment_analysis %>%
   arrange(desc(sentiment_score)) %>%
   print(n = Inf)  # show all 200 articles
 
+# Show the average sentiment score
+sentiment_analysis %>%
+  summarise(
+    average_sentiment_score = mean(sentiment_score)
+  )
+
+
+
 
 
 
