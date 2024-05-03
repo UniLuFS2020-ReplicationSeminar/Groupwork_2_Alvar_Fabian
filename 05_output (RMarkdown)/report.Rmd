@@ -1,0 +1,149 @@
+---
+title: "CE2"
+author: "Fabian Krügel, Alvar Stirnimann"
+date: "2024-05-03"
+output: html_document
+---
+
+# Class Exercise 2
+
+## Data Extraction
+
+```{r, echo=FALSE}
+library(rvest)
+library(jsonlite)
+library(httr)
+library(stringr)
+library(dplyr)  
+
+# Define the base URL for the Guardian API content endpoint
+url <- "https://content.guardianapis.com/search"
+
+# Setup query parameters
+api_key_data <- read.csv("api_key.csv", header = FALSE)
+api_key <- api_key_data$V1[1]
+base_url <- "https://content.guardianapis.com/search"
+query_params <- list(
+  q = "cryptocurrency AND blockchain AND bitcoin OR ethereum", # to make the search more robust and specific
+  "order-by" = "newest",
+  "page-size" = 200,
+  "api-key" = api_key,
+  "show-fields" = "body"
+)
+
+# Construct URL and make a HTTP request
+url <- modify_url(base_url, query = query_params)
+response <- GET(url)
+```
+
+```{r, echo=FALSE}
+# Process the API response and extract article details
+if (http_status(response)$category == "Success") {
+  data <- content(response, "parsed")
+  articles <- map(data$response$results, ~list(
+    title = .x$webTitle,
+    body = .x$fields$body,
+    date = .x$webPublicationDate  
+  ))
+} else {
+  stop("Failed to fetch data")
+}
+
+# Converting list to a data frame
+articles_df <- map_df(data$response$results, ~data.frame(
+  title = coalesce(.x$webTitle, ""),
+  body = coalesce(.x$fields$body, ""),
+  date = coalesce(.x$webPublicationDate, "")  
+), .id = "article_id")
+
+# Save to CSV
+#write.csv(articles_df, "cryptocurrency_articles.csv", row.names = FALSE)
+```
+
+
+## Data Preparation
+
+```{r, echo=FALSE}
+library(tidytext)
+
+# Combine title, body, and date into one text column for text cleaning
+processed_articles_df <- articles_df %>%
+  mutate(
+    combined_text = paste(title, body, date),
+    cleaned_text = combined_text %>%
+      tolower() %>%
+      str_remove_all("[[:punct:]]") %>%
+      str_remove_all("[[:digit:]]")
+  ) %>%
+  unnest_tokens(output = word, input = cleaned_text)
+
+# Remove stop words 
+clean_tokens_df <- processed_articles_df %>%
+  anti_join(stop_words, by = "word")
+```
+
+
+## Sentiment Analysis
+
+```{r, echo=FALSE}
+# Load the AFINN sentiment lexicon and join with tokenized words
+sentiment_analysis <- clean_tokens_df %>%
+  inner_join(get_sentiments("afinn"), by = "word") %>%
+  group_by(article_id) %>%
+  summarise(
+    sentiment_score = sum(value),  
+    .groups = 'drop'  
+  )
+
+# Display sentiment scores for each article, sorted by score
+sentiment_analysis %>%
+  arrange(desc(sentiment_score)) %>%
+  print(n = Inf)  # show all 200 articles
+
+# Show the average sentiment score
+sentiment_analysis %>%
+  summarise(
+    average_sentiment_score = mean(sentiment_score)
+  )
+
+```
+The average sentiment score is positive (19.65) meaning that articles with the keyword cryptocurrency, blockchain, bitcoin, or ethereum have a positive sentiment on average. We considered the sentiment score of each word in the articles and summed them up to get the sentiment score for each article. The newest 200 articles articles fulfilling the search criteria were analyzed (July 2021 - April 2023). More research would be necessary to assess whether the positive sentiment score is robust and whether it has changed over time.
+
+
+## Visualizations
+
+```{r, echo=FALSE}
+library(ggplot2)
+
+# Plot of sentiment analysis
+sentiment_plot1 <- ggplot(sentiment_analysis, aes(x = article_id, y = sentiment_score, fill = sentiment_score > 0)) +
+  geom_col(show.legend = FALSE) +
+  scale_fill_manual(values = c("red", "green")) +
+  labs(title = "Sentiment Analysis of Articles", x = "Article ID", y = "Sentiment Score") +
+  theme_minimal()
+
+# Add the average sentiment score to the plot
+sentiment_plot2 <- ggplot(sentiment_analysis, aes(x = article_id, y = sentiment_score, fill = sentiment_score > 0)) +
+  geom_col(show.legend = FALSE) +
+  scale_fill_manual(values = c("red", "green")) +
+  labs(title = "Sentiment Analysis of Articles", x = "Article ID", y = "Sentiment Score") +
+  theme_minimal() +
+  geom_hline(yintercept = mean(sentiment_analysis$sentiment_score), color = "blue", linetype = "dashed")
+```
+
+```{r, echo=FALSE}
+# Histogram of sentiment scores
+sentiment_plot3 <- ggplot(sentiment_analysis, aes(x = sentiment_score)) +
+  geom_histogram(bins = 30, fill = "dodgerblue", color = "black") +
+  labs(title = "Distribution of Sentiment Scores Across Articles",
+       x = "Sentiment Score",
+       y = "Count of Articles") +
+  theme_minimal()
+
+# Save the plots
+#ggsave("sentiment_plot1.png", plot = sentiment_plot1, width = 10, height = 6)
+#ggsave("sentiment_plot2.png", plot = sentiment_plot2, width = 10, height = 6)
+#ggsave("sentiment_plot3.png", plot = sentiment_plot3, width = 10, height = 6)
+
+```
+
