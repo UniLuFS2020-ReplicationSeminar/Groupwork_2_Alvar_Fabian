@@ -19,8 +19,18 @@ articles <- list(
 
 # Make the HTTP request
 response <- GET(url = url, query = articles)
+if (status_code(response) != 200) {
+  stop("Failed to fetch data: HTTP status code ", status_code(response))
+}
+
+# Parse the JSON data
 data <- content(response, "text", encoding = "UTF-8")
 parsed_data <- fromJSON(data)
+
+# Check if articles are available
+if (length(parsed_data$response$results) == 0) {
+  stop("No articles found for the given query.")
+}
 
 # Extract the articles
 articles <- parsed_data$response$results
@@ -28,5 +38,7 @@ articles
 
 # Creating a csv file to store the data
 write.csv(articles, file = "articles.csv", row.names = FALSE)
+
+
 
 
