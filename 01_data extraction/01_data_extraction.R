@@ -13,7 +13,7 @@ articles <- list(
   "to-date" = format(Sys.Date(), "%Y-%m-%d"),  # Up to today's date
   "order-by" = "newest",  # Order by publication date (newest first)
   "show-fields" = "title,bodyText,lastModified",  # Fetch only specified fields
-  "page-size" = 10,  # Number of results per page
+  "page-size" = 30,  # Number of results per page
   "api-key" = api_key  # Use the API key
 )
 
@@ -24,7 +24,16 @@ parsed_data <- fromJSON(data)
 
 # Extract the articles
 articles <- parsed_data$response$results
-articles
+
+# If the structure is too large, focus on the first few elements
+print(parsed_data$response$results[[1]])  # Print the first article to check its structure
+
+# Remove commas and semicolons inside the bodyText
+for(i in seq_along(articles[[9]]$bodyText[[i]])) {
+  articles[[9]]$bodyText <- gsub(";", "", articles[[9]]$bodyText)  # Remove semicolon
+  articles[[9]]$bodyText <- gsub(",", "", articles[[9]]$bodyText)  # Remove commas
+}
+
 
 # Creating a csv file to store the data
 write.csv(articles, file = "articles.csv", row.names = FALSE)
